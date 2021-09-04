@@ -1,0 +1,23 @@
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="android:textColor">#ffffff</item>
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/splash</item>
+          
+        <!-- Defining that new color in ColorPrimaryDark -->
+        <item name="colorPrimaryDark">@color/splash</item>
+        <item name="colorAccent">@color/splash</item>
+
+        <item name="android:navigationBarColor">@color/splash</item>
+
+        <item name="android:windowBackground">@color/splash</item>
+    </style>
+
+    <style name="SplashTheme" parent="AppTheme">
+        <item name="android:windowBackground">@drawable/splash_screen</item>
+    </style>
+
+</resources>

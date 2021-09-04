@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "app_MusicPlus",
+    "slug": "snack-3a19dc65-4d86-40cf-bf65-846f8081a464",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#212121"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  },
+  "name": "app_MusicPlus",
+  "displayName": "MusicPlus",
+  "backgroundColor": "#212121"
+}
