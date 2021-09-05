@@ -15,6 +15,7 @@ import { Color, PlaylistHelper } from '../../utils';
 import SliderComponent from './SliderComponent';
 import CapaMusic from './CapaMusic';
 import Actions from './Actions';
+import PlaylistContainer from './PlaylistContainer';
 
 import RNFetchBlob from "react-native-fetch-blob";
 const fs = RNFetchBlob.fs;
@@ -42,7 +43,7 @@ const image2base64 = (uri)=>{
 }
 
 export default ({ route, navigation })=>{
-	let { track, loaded, previewList } = PlaylistHelper.useMusicPlaying();
+	let { track, loaded } = PlaylistHelper.useMusicPlaying();
 
 	let backgroundColor = ["#424242", "#212121"];
 
@@ -67,7 +68,7 @@ export default ({ route, navigation })=>{
 
 	const colorText = ((Color(backgroundColor[0]).rgb.reduce((a,b)=>a+b, 0))/3) > 120 ? "#212121" : "#f5f5f5";
 
-	const darkColor = Color(backgroundColor[0]).blend(backgroundColor[1], 60).string
+	const darkColor = Color(backgroundColor[0]).blend(backgroundColor[1], 40).string
 
 	return <ContainerScreen 
 		backgroundColor={backgroundColor[0]}
@@ -95,9 +96,7 @@ export default ({ route, navigation })=>{
   	</Container>
 
   	{loaded ? <SwipePlaylist
-			container={<View>
-				<Text>{"Container"}</Text>
-			</View>}
+			container={<PlaylistContainer/>}
 			topHeight={50}
 			swipeHeight={navbarHeight+30}
 			backgroundColor={darkColor}

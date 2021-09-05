@@ -58,6 +58,15 @@ export default class PlaylistHelper{
 	      type: "loading"
 	    });
 
+	    const pList = dataStorager.get("PreviewPlayerList");
+
+	    if(Array.isArray(pList) && pList.length > 0 && pList[pList.length-1]?.browseId === browseId){
+				TrackPlayer.skip(0);
+				TrackPlayer.play();
+	    	resolve();
+	    	return;
+	    }
+
 	    await this.trackPlayerInit();
 
 	    let r = null, i = typeList.indexOf(type);
@@ -81,22 +90,17 @@ export default class PlaylistHelper{
 						subtitle: t.subtitle,
 						videoId: t.videoId,
 						playlistId: t.playlistId,
+						thumbnails: t.thumbnails,
+						browseId: browseId,
 						loaded: false
 					}
 				});
 
 	    	dataStorager.set("PreviewPlayerList", previewPlayerList);
 
-				this.playByPlayList(result).then(resolve).catch(reject);
+				this.playByPlayList(result);
 
-				return;
-
-	      navigation.navigate("PlayView", {
-	        type: "normal",
-	        indexPlay: 0
-	      });
-
-	      resolve();
+				resolve();
 	    }).catch(console.log);
 		});
 	}
@@ -107,53 +111,45 @@ export default class PlaylistHelper{
 		  if(Array.isArray(listMusics) && listMusics.length > 0){
 				TrackPlayer.add(listMusics);
 		  }
-	    dataStorager.set("IndexMusicPlayerList", 0, true);
 	    dataStorager.set("MusicPlayerList", [], true);
+	    dataStorager.set("PlaylistInitialized", true);
 	    dataStorager.set("PreviewPlayerList", []);
 			resolve(true);
 		});
 	};
 
 	static playByPlayList(list, index, player){
-		return new Promise(async (resolve, reject)=>{
-			let playlistId = dataStorager.get("PlayerListId");
+		let playlistId = dataStorager.get("PlayerListId");
 
-			if(list[0]["playlistId"] !== playlistId){
-				resolve();
-				return;
+		if(list[0]["playlistId"] !== playlistId){
+			return;
+		}
+
+		const isValidList = Array.isArray(list) ? list.map(t => t instanceof TrackMusic).every(Boolean) : false;
+
+		if(!isValidList || (Array.isArray(list) && index >= list.length)){
+			return;
+		}
+
+		index = typeof index === "number" ? index : 0;
+
+		this.pushTrackMusic(list[index]).then(()=>{
+
+			let previewPlayerList = dataStorager.get("PreviewPlayerList");
+
+			previewPlayerList[index].loaded = true;
+
+			dataStorager.set("PreviewPlayerList", previewPlayerList);
+
+			if((index/(list.length-1)) >= 0.15 && !player){
+				player = true;
+				TrackPlayer.play();
 			}
 
-			const isValidList = Array.isArray(list) ? list.map(t => t instanceof TrackMusic).every(Boolean) : false;
-
-			if(!isValidList || (Array.isArray(list) && index >= list.length)){
-				resolve();
-				return;
+			if(index < list.length){
+				this.playByPlayList(list, index+1, player);
 			}
-
-			index = typeof index === "number" ? index : 0;
-
-			this.pushTrackMusic(list[index]).then(()=>{
-
-				let previewPlayerList = dataStorager.get("PreviewPlayerList");
-
-				previewPlayerList[index].loaded = true;
-
-				dataStorager.set("PreviewPlayerList", previewPlayerList);
-
-				if((index/(list.length-1)) >= 0.15 && !player){
-					player = true;
-					TrackPlayer.play();
-				}
-
-				if(index < list.length){
-					this.playByPlayList(list, index+1, player).then(()=>{
-						resolve();
-					}).catch(reject);
-				}else{
-					resolve();
-				}
-			}).catch(reject);
-		});
+		}).catch(console.log);
 	}
 
 	static pushTrackMusic(music){
@@ -187,6 +183,8 @@ export default class PlaylistHelper{
 						let playerListNow = dataStorager.get("MusicPlayerList");
 						playerListNow = Array.isArray(playerListNow) ? playerListNow : [];
 
+						music.index = playerListNow.length;
+
 						playerListNow.push(music.toJson());
 
 				    dataStorager.set("MusicPlayerList", playerListNow, true);
@@ -211,7 +209,8 @@ export default class PlaylistHelper{
 		const _a = react1.useState({
 			track: new TrackMusic().toJson(),
 			previewList: [],
-			loaded: false
+			loaded: false,
+			initialized: false
 		}), 
 		state = _a[0], 
 		setState = _a[1];
@@ -221,7 +220,7 @@ export default class PlaylistHelper{
 
 		stateRef.current = state;
 
-		useTrackPlayerEvents([Event.PlaybackTrackChanged], async event => {
+		useTrackPlayerEvents([Event.PlaybackTrackChanged, Event.PlaybackState], async event => {
 			if(event.type !== Event.PlaybackTrackChanged){return;}
 
 			let playerListNow = dataStorager.get("MusicPlayerList");
@@ -233,12 +232,15 @@ export default class PlaylistHelper{
 
 			let track = playerListNow[index];
 
-			if(!track){return;}
+			if(!track){
+				track = new TrackMusic().toJson();
+			}
 
 			setState({
 				track: track,
 				previewList: state.previewList,
-				loaded: state.loaded
+				loaded: state.loaded,
+				initialized: (dataStorager.get("PlaylistInitialized") === true)
 			});
 		});
 
@@ -249,7 +251,7 @@ export default class PlaylistHelper{
 				}
 
 				let a = dataStorager.get("PreviewPlayerList"), 
-						isLoaded = stateRef.current.loaded;
+						isLoaded = new TrackMusic().toJson();
 
 				if(Array.isArray(a)){
 					let b = a.map(t => t.loaded) || [];
@@ -268,7 +270,8 @@ export default class PlaylistHelper{
 				setState({
 					track: trackNow,
 					previewList: a,
-					loaded: isLoaded
+					loaded: isLoaded,
+					initialized: (dataStorager.get("PlaylistInitialized") === true)
 				});
 
 				let newIndex = dataStorager.addListener("PreviewPlayerList", async (a)=>{
@@ -280,12 +283,19 @@ export default class PlaylistHelper{
 					setState({
 						track: stateRef.current.track,
 						previewList: a,
-						loaded: isLoaded
+						loaded: isLoaded,
+						initialized: (dataStorager.get("PlaylistInitialized") === true)
 					});
 				});
 
 				setIndex(newIndex);
 			})();
+
+			return ()=>{
+				if(index >= 0){
+					dataStorager.deleteListener("PreviewPlayerList", index);
+				}
+			}
 		}, []);
 
 		return state;

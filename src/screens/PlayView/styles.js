@@ -48,9 +48,7 @@ export const CapaMusicBackground = styled(ImageBackground)`
   bottom: 0;
 `;
 
-export const CapaMusicLoadingIcon = styled.ActivityIndicator`
-
-`;
+export const CapaMusicLoadingIcon = styled.ActivityIndicator``;
 
 export const CapaMusicActions = styled(LinearGradient)`
   position: absolute;
@@ -161,3 +159,66 @@ export const SwipeHidden = styled.TouchableOpacity`
   padding-bottom: ${navbarHeight+80}px;
   opacity: ${(props)=>{return props.opacity ? props.opacity : "1"}};
 `;
+
+export const PlaylistView = styled.View`
+  flex-direction: column;
+`;
+
+export const PlaylistElement = styled.TouchableOpacity`
+  flex-direction: row;
+  padding: 5px 0px 5px 10px;
+  background-color: ${(props)=>{return props.playing === true ? "rgba(255, 255, 255, .1)" : "transparent"}};
+  opacity: ${(props)=>{return props.loaded !== true ? "0.5" : "1"}}
+`;
+
+export const PlaylistTrackCapa = styled.View`
+  width: 50px;
+  height: 50px;
+  overflow: hidden;
+  border-radius: 5px;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  border-style: solid;
+  border-width: 1px;
+  border-left-color: rgba(0, 0, 0, 0.2);
+  border-top-color: rgba(0, 0, 0, 0.1);
+  border-right-color: rgba(0, 0, 0, 0.2);
+  border-bottom-color: rgba(0, 0, 0, 0.1);
+  margin: 0 10px;
+`;
+
+export const PlaylistTrackCapaBackground = styled(ImageBackground)`
+  background: rgba(255, 255, 255, 0.3);
+  flex: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+`;
+
+export const PlaylistTrackTitle = styled.SafeAreaView`
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  margin: 0 10px;
+  flex: 1;
+`;
+
+export const PlaylistTrackTitleText = styled.Text`
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 2px;
+  width: 100%;
+`;
+
+export const PlaylistTrackSubtitleText = styled.Text`
+  font-size: 12px;
+  opacity: .6;
+  width: 100%;
+`;
+
+export const PlaylistCapaMusicLoadingIcon = styled.ActivityIndicator``;
+
+//PlaylistTrackTitle, PlaylistTrackTitleText 

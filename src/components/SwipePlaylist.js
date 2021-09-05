@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { StatusBar, Platform, Dimensions, PanResponder, LayoutAnimation, StyleSheet, Text, Image, View, ScrollView, TouchableOpacity, Animated } from "react-native";
+import { StatusBar, Platform, Dimensions, PanResponder, LayoutAnimation, UIManager, StyleSheet, Text, Image, View, ScrollView, TouchableOpacity, Animated } from "react-native";
 import styled from 'styled-components/native';
 
 import images from '../assets/swipe_playlist';
@@ -12,6 +12,10 @@ const DEVICE_HEIGHT = Dimensions.get("screen").height - MARGIN_TOP;
 const SCREEN_HEIGHT = Dimensions.get('screen').height;
 const WINDOW_HEIGHT = Dimensions.get('window').height;
 const NAVBAR_HEIGHT = Math.round(SCREEN_HEIGHT - WINDOW_HEIGHT);
+
+if(Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental){
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default class SwipePlaylist extends Component{
 	static defautProps = {
@@ -39,6 +43,7 @@ export default class SwipePlaylist extends Component{
       }
     };
     this.checkCollapsed = true;
+
     this.showMini = this.showMini.bind(this);
     this.showFull = this.showFull.bind(this);
 
@@ -49,12 +54,11 @@ export default class SwipePlaylist extends Component{
 
   componentWillMount(){
     this._panResponder = PanResponder.create({
-    	onMoveShouldSetPanResponderCapture: (e, gestureState) => {
-        return this.scrollY <= 0;
-      },
+      onMoveShouldSetResponderCapture: () => false,
+      onMoveShouldSetPanResponderCapture: () => false,
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (e, gestureState) =>  {
-        return !(this.scrollY > 0 || (Math.abs(gestureState.dx) < 5 && Math.abs(gestureState.dy) < 5));
+        return !(this.scrollY > 1 || (Math.abs(gestureState.dx) < 5 && Math.abs(gestureState.dy) < 5));
       },
       onPanResponderTerminationRequest: () => false,
       onPanResponderMove: this._onPanResponderMove.bind(this),
@@ -67,38 +71,57 @@ export default class SwipePlaylist extends Component{
     this.swipeIconRef && this.swipeIconRef.setState({ icon: images.arrow_up, showIcon: true });
   }
 
-  updateNativeProps(){
+  componentDidUpdate(){
+    const { onShowFull, backgroundColor } = this.props;
+
+    this.backgroundColor = Color(backgroundColor || "#263238");
+    this.customStyle.style.backgroundColor = `rgba(${this.backgroundColor.rgb.join(", ")}, ${this.opacity})`;
+
+    this.updateNativeProps();
+  }
+
+  updateNativeProps(callback, error){
+    let animation = null;
+
     switch (this.props.animation){
       case "linear":
-        LayoutAnimation.linear();
+        animation = LayoutAnimation.Presets.linear;
+        //LayoutAnimation.linear();
         break;
       case "spring":
-        LayoutAnimation.spring();
+        animation = LayoutAnimation.Presets.spring;
+        //LayoutAnimation.spring();
         break;
       case "easeInEaseOut":
-        LayoutAnimation.easeInEaseOut();
+        animation = LayoutAnimation.Presets.easeInEaseOut;
+        //LayoutAnimation.easeInEaseOut();
         break;
       case "none":
+        break;
       default:
+        animation = LayoutAnimation.Presets.easeInEaseOut;
+        //LayoutAnimation.easeInEaseOut();
         break;
     }
-    this.viewRef.setNativeProps(this.customStyle);
-    this.scrollRef.setNativeProps({
-    	style: {opacity: this.opacity}
+
+    if(!animation){
+      callback && callback();
+    }else{
+      LayoutAnimation.configureNext(animation);
+    }
+
+    this.viewRef && this.viewRef.setNativeProps(this.customStyle);
+    this.scrollRef && this.scrollRef.setNativeProps({
+      style: {opacity: this.opacity}
     });
+
+    setTimeout(()=>{
+      callback && callback();
+    }, 300);
   }
 
   _onPanResponderMove(event, gestureState){
-  	this.points.push({x: gestureState.dx, y: gestureState.dy});
-
-  	let to = 0;
-
-  	if(this.points.length >= 2){
-	  	let s = Simplify(this.points, 4, false),
-	  			end = s.length-1;
-
-	  	to = (s[end].y > s[end-1].y) ? 1 : 2;
-	  }
+  	this.points.push({x: gestureState.moveX, y: gestureState.moveY});
 
   	if (gestureState.dy > 0 && !this.checkCollapsed) {
       // SWIPE DOWN
@@ -107,9 +130,10 @@ export default class SwipePlaylist extends Component{
 
   		this.swipeIconRef && this.swipeIconRef.setState({ icon: images.minus, showIcon: true });
 
-      !this.state.collapsed && this.setState({ collapsed: true });
+      //this.scrollRef && this.scrollRef?.setNativeProps({scrollEnabled: false});
 
-    }else if(this.checkCollapsed && gestureState.dy < 0){
+      !this.state.collapsed && this.setState({ collapsed: true });
+    }else if(this.checkCollapsed && gestureState.dy < -60){
       // SWIPE UP
       this.top = 0;
       this.customStyle.style.top = Math.min(DEVICE_HEIGHT - this.SWIPE_HEIGHT, Math.max(DEVICE_HEIGHT + gestureState.dy, MARGIN_TOP+this.SPACE_TOP_HEIGHT));
@@ -123,6 +147,8 @@ export default class SwipePlaylist extends Component{
       }else{
       	this.swipeIconRef && this.swipeIconRef.setState({ icon: images.minus, showIcon: true });
       }
+
+      //this.scrollRef && this.scrollRef?.setNativeProps({scrollEnabled: true});
 
       this.state.collapsed && this.setState({ collapsed: false });
     }
@@ -140,6 +166,8 @@ export default class SwipePlaylist extends Component{
   }
 
   _onPanResponderRelease(event, gestureState){
+    if(this.points.length < 2){return;};
+
   	let s = Simplify(this.points, 4, false),
   			end = s.length-1;
 
@@ -159,11 +187,15 @@ export default class SwipePlaylist extends Component{
   	this.customStyle.style.backgroundColor = `rgba(${this.backgroundColor.rgb.join(", ")}, 1)`;
     this.customStyle.style.top = MARGIN_TOP+this.SPACE_TOP_HEIGHT;
     this.swipeIconRef && this.swipeIconRef.setState({ icon: images.arrow_down, showIcon: true });
+
+    this.scrollRef && this.scrollRef?.setNativeProps({scrollEnabled: true});
     this.scrollY = 0;
     this.scrollRef && this.scrollRef?.scrollTo({y: 0});
-    this.updateNativeProps();
+
     this.state.collapsed && this.setState({ collapsed: false });
     this.checkCollapsed = false;
+
+    this.updateNativeProps();
     onShowFull && onShowFull();
   }
 
@@ -171,15 +203,24 @@ export default class SwipePlaylist extends Component{
     const { onShowMini, backgroundColor } = this.props;
     //this.SWIPE_HEIGHT = 150; //Avoid hiding when swiping down.
     this.backgroundColor = Color(backgroundColor || "#263238");
-  	this.opacity = 0;
-  	this.customStyle.style.backgroundColor = `rgba(${this.backgroundColor.rgb.join(", ")}, 0)`;
     this.customStyle.style.top = DEVICE_HEIGHT - this.SWIPE_HEIGHT;
     this.swipeIconRef && this.swipeIconRef.setState({ icon: images.arrow_up, showIcon: true });
+
+    this.scrollRef && this.scrollRef?.setNativeProps({scrollEnabled: false});
     this.scrollY = 0;
     this.scrollRef && this.scrollRef?.scrollTo({y: 0});
-    this.updateNativeProps();
+
     !this.state.collapsed && this.setState({ collapsed: true });
     this.checkCollapsed = true;
+
+    this.updateNativeProps(()=>{
+      this.opacity = 0;
+      this.customStyle.style.backgroundColor = `rgba(${this.backgroundColor.rgb.join(", ")}, 0)`;
+      this.updateNativeProps();
+    });
+
+    //setTimeout();
+
     onShowMini && onShowMini();
   }
 
@@ -199,13 +240,19 @@ export default class SwipePlaylist extends Component{
 	      }
 			]}
   	>
-  		<TouchableOpacity onClick={()=>{
-  			if(this.checkCollapsed){
-  				this.showFull();
-  			}else{
-  				this.showMini();
-  			}
-  		}}>
+  		<TouchableOpacity onPress={()=>{
+    			if(collapsed){
+    				this.showFull();
+    			}else{
+    				this.showMini();
+    			}
+    		}}
+        style={{
+          height: 40,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
 	  		<SwipeIcon
 	        hasRef={ref => (this.swipeIconRef = ref)}
 	      />
@@ -250,9 +297,10 @@ class SwipeIcon extends Component {
   }
 
   render() {
+    const { style } = this.props;
     const { icon, showIcon } = this.state;
     return (
-      <View style={{ alignItems: 'center', height: 10, marginBottom: 5 }}>
+      <View style={[{ alignItems: 'center', height: 10, marginBottom: 5 }, style]}>
         {showIcon && (
           <Image
             source={icon}
@@ -266,8 +314,7 @@ class SwipeIcon extends Component {
 
 const styles = StyleSheet.create({
   wrapSwipe: {
-    padding: 10,
-    paddingBottom: 0,
+    padding: 0,
     backgroundColor: "#ccc",
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
@@ -277,6 +324,5 @@ const styles = StyleSheet.create({
   },
   wrapScroll: {
   	flex: 1,
-  	marginTop: 10,
   }
 });

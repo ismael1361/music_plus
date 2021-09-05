@@ -147,68 +147,40 @@ const getBarProgressType = ()=>{
   return value;
 }
 
-const BarProgressCenter = ({stroke})=>{
-  const [ progressValue, setProgressValue ] = useState(0);
-  const [ progressType, setProgressType ] = useState(getBarProgressType());
+let initialLoading = false;
 
+const BarProgressCenter = ({stroke, loading})=>{
   const {position, duration} = useProgress(250);
 
+  const value = duration > 0 ? position / duration : 0;
+
   const AnimatedPath = Animated.createAnimatedComponent(Path);
-
-  dataStorager.deleteListener("barProgressValue");
-  dataStorager.addListener("barProgressValue", (a)=>{
-    let value = (typeof a === "number") ? Number(a.toFixed(3)) : 0;
-
-    if(a === "loading" && progressType === "loading"){
-      return;
-    }
-
-    if(a === "loading"){
-      setProgressType("loading");
-      return;
-    }
-
-    if(progressType === "loading"){
-      AnimatedProgress.setOffset(0);
-      setProgressType("progress_bar");
-    }
-
-    if(value !== progressValue || (typeof a === "number" && progressType === "loading")){
-      setProgressValue(value);
-    }
-  });
 
   const animateWidth = ()=>{
     AnimatedProgress.setValue(0);
     Animated.timing(AnimatedProgress, {useNativeDriver: true, toValue: lengthAnimatedProgress, duration: 1500, easing: Easing.ease}).start(()=>{
-      var type = dataStorager.get("barProgressValue");
-      if(type !== "loading"){
-        setProgressType("progress_bar");
+      if(!loading){
+        initialLoading = false;
         return;
       }
       animateWidth();
     });
   }
 
-  if(progressType === "loading"){
+  if(loading && !initialLoading){
+    initialLoading = true;
     animateWidth();
   }
 
-  useEffect(() => {
-    if (position && duration) {
-      setProgressValue(position / duration);
-    }
-  }, [position, duration]);
-
-  let d_ = describeArc(12, 12, 10, 0, Math.round(359*progressValue));
+  let d_ = describeArc(12, 12, 10, 0, Math.round(359*value));
 
   //d_ = describeArc(12, 12, 10, 359-40, 0);
 
   stroke = Color(String(stroke)).isValidColor ? stroke : "#f44336";
 
   return <ProgressCenter viewBox="0 0 24 24" stroke={stroke} fill="none">
-    <AnimatedPath d={pathAnimatedProgress} strokeWidth={(progressType !== "loading" ? 0 : 2)} strokeLinecap="round" strokeLinejoin="round"/>
-    <Path d={d_ || ""} strokeWidth={(progressValue > 0 && progressType !== "loading" ? 2 : 0)} strokeLinecap="round" strokeLinejoin="round"/>
+    <AnimatedPath d={pathAnimatedProgress} strokeWidth={(!loading ? 0 : 2)} strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d={d_ || ""} strokeWidth={(value > 0 && !loading ? 2 : 0)} strokeLinecap="round" strokeLinejoin="round"/>
   </ProgressCenter>
 }
 
@@ -266,11 +238,11 @@ const TrackTitleText = styled.Text`
 `;
 
 const TrackView = ({track, background, color})=>{
-  const { title, subtitle, thumbnails } = track;
+  const { title, subtitle, thumbnails } = (track || {});
   const navigation = useNavigation();
 
   let image = "";
-  let thisTitle = [title, subtitle].filter(v=>typeof v === "string" && v !== "").join(" - ");
+  let thisTitle = title && title !== "" ? ([title, subtitle].filter(v=>typeof v === "string" && v !== "").join(" - ")) : "Carregando...";
 
   if(Array.isArray(thumbnails) && thumbnails.length > 0){
     image = thumbnails[thumbnails.length-1]["url"];
@@ -293,7 +265,7 @@ const TrackView = ({track, background, color})=>{
 
 export default ({ state, navigation }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  let { track, loaded } = PlaylistHelper.useMusicPlaying();
+  let { track, loaded, initialized } = PlaylistHelper.useMusicPlaying();
 
   let themeColor = ["#212121", "#212121"];
   let backgroundColor = "#212121";
@@ -341,7 +313,7 @@ export default ({ state, navigation }) => {
   };
 
   return (<TabArea>
-    {(track && track.videoId !== "") ? <TrackView track={track} background={backgroundColor} color={progressColor}/> : null}
+    {(initialized || (track && track.videoId)) ? <TrackView track={(loaded ? track : {})} background={(loaded ? backgroundColor : null)} color={(loaded ? progressColor : null)}/> : null}
 
     <TabButtons>
       <TabItem onPress={()=>goTo('Home')}>
@@ -350,9 +322,9 @@ export default ({ state, navigation }) => {
       <TabItem onPress={()=>goTo('Search')}>
         <Svg viewBox="0 0 24 24" width="24" height="24" fill="#ffffff" style={{opacity: state.index===1? 1 : 0.5}}><Path d={mdiMagnify}/></Svg>
       </TabItem>
-      <TabItemCenter disabled={!loaded} color={backgroundColor} activeOpacity={1} onPress={onButtonPressed}>
-        <BarProgressCenter stroke={progressColor}/>
-        <Svg viewBox="0 0 24 24" width="40" height="40" fill={progressColor}><Path d={isPlaying ? mdiPause : mdiPlay}/></Svg>
+      <TabItemCenter disabled={!loaded} color={(loaded ? backgroundColor : null)} activeOpacity={1} onPress={onButtonPressed}>
+        <BarProgressCenter stroke={(loaded ? progressColor : null)} loading={(initialized && !loaded)}/>
+        <Svg viewBox="0 0 24 24" width="40" height="40" fill={(loaded ? progressColor : null)}><Path d={isPlaying ? mdiPause : mdiPlay}/></Svg>
       </TabItemCenter>
       <TabItem onPress={()=>goTo('MayPlaylist')}>
         <Svg viewBox="0 0 24 24" width="24" height="24" fill="#ffffff" style={{opacity: state.index===3? 1 : 0.5}}><Path d={mdiPlaylistMusic}/></Svg>

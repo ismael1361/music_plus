@@ -47,6 +47,8 @@ export default ({ disabled, onNext, onPrevious, onShuffled, onLooped })=>{
 			TrackPlayer.skipToNext();
 		}
 
+		TrackPlayer.play();
+
 		if(typeof onNext === "function"){
 			onNext(currentIndex);
 		}
@@ -64,6 +66,8 @@ export default ({ disabled, onNext, onPrevious, onShuffled, onLooped })=>{
 			currentIndex -= 1;
 			TrackPlayer.skipToPrevious();
 		}
+
+		TrackPlayer.play();
 
 		if(typeof onPrevious === "function"){
 			onPrevious(currentIndex);
