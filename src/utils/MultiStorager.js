@@ -136,15 +136,28 @@ class DataStorager {
     if (!callback || typeof callback !== 'function') return;
     if (!this.listeners[key]) this.listeners[key] = [];
     let indexFunction = null;
-    this.listeners[key].forEach((f, i) => {
-      if (callback === f) {
+
+    for(let i=0; i<this.listeners[key].length; i++){
+      if (typeof this.listeners[key][i] === callback) {
         indexFunction = i;
         this.listeners[key][i] = callback;
+        break;
       }
-    });
+    }
+
     if (indexFunction !== null) return indexFunction;
+
     indexFunction = this.listeners[key].length;
-    this.listeners[key].push(callback);
+
+    for(let i=0; i<this.listeners[key].length; i++){
+      if (typeof this.listeners[key][i] !== "function") {
+        indexFunction = i;
+        break;
+      }
+    }
+
+    this.listeners[key][indexFunction] = callback;
+
     return indexFunction;
   }
 
@@ -156,7 +169,8 @@ class DataStorager {
     if (typeof callback === 'function') {
       this.listeners[key].forEach((f, i) => {
         if (f === callback) {
-          delete this.listeners[key][i];
+          this.listeners[key][i] = null;
+          //delete this.listeners[key][i];
         }
       });
     } else if (
@@ -164,15 +178,18 @@ class DataStorager {
       callback >= 0 &&
       callback < this.listeners[key].length
     ) {
-      delete this.listeners[key][callback];
+      this.listeners[key][callback] = null;
+      //delete this.listeners[key][callback];
     } else {
-      delete this.listeners[key];
+      this.listeners[key] = null;
+      //delete this.listeners[key];
     }
   }
 
   deleteListeners() {
     for (let k in this.listeners) {
-      delete this.listeners[k];
+      this.listeners[k] = null;
+      //delete this.listeners[k];
     }
   }
 }

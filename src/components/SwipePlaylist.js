@@ -4,6 +4,8 @@ import styled from 'styled-components/native';
 
 import images from '../assets/swipe_playlist';
 
+import LinearGradient from 'react-native-linear-gradient';
+
 import { Color, Simplify } from '../utils';
 
 const MARGIN_TOP = Platform.OS === "ios" ? 20 : StatusBar.currentHeight;
@@ -49,6 +51,7 @@ export default class SwipePlaylist extends Component{
 
     this.points = [];
     this.scrollY = 0;
+    this.isScrolling = false;
     this.opacity = 0;
   }
 
@@ -57,8 +60,12 @@ export default class SwipePlaylist extends Component{
       onMoveShouldSetResponderCapture: () => false,
       onMoveShouldSetPanResponderCapture: () => false,
       onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (e, gestureState) =>  {
-        return !(this.scrollY > 1 || (Math.abs(gestureState.dx) < 5 && Math.abs(gestureState.dy) < 5));
+      onMoveShouldSetPanResponder: (e, gestureState) => {
+        if(this.checkCollapsed === false){
+          return gestureState.moveY < (MARGIN_TOP+this.SPACE_TOP_HEIGHT+50);
+        }
+
+        return !(this.isScrolling || (Math.abs(gestureState.dx) < 5 && Math.abs(gestureState.dy) < 5));
       },
       onPanResponderTerminationRequest: () => false,
       onPanResponderMove: this._onPanResponderMove.bind(this),
@@ -78,6 +85,7 @@ export default class SwipePlaylist extends Component{
     this.customStyle.style.backgroundColor = `rgba(${this.backgroundColor.rgb.join(", ")}, ${this.opacity})`;
 
     this.updateNativeProps();
+    //this.setState({});
   }
 
   updateNativeProps(callback, error){
@@ -110,9 +118,16 @@ export default class SwipePlaylist extends Component{
       LayoutAnimation.configureNext(animation);
     }
 
+    this.opacity = ((MARGIN_TOP+this.SPACE_TOP_HEIGHT+45) > this.customStyle.style.top) ? 1 : this.opacity;
+
     this.viewRef && this.viewRef.setNativeProps(this.customStyle);
     this.scrollRef && this.scrollRef.setNativeProps({
       style: {opacity: this.opacity}
+    });
+
+    this.linearGradientRef && this.linearGradientRef.setNativeProps({
+      style: {opacity: (this.opacity >= 1 ? 1 : 0)},
+      colors: [`rgba(${this.backgroundColor.rgb.join(", ")}, 1)`, `rgba(${this.backgroundColor.rgb.join(", ")}, 0.0)`]
     });
 
     setTimeout(()=>{
@@ -121,6 +136,7 @@ export default class SwipePlaylist extends Component{
   }
 
   _onPanResponderMove(event, gestureState){
+    if(this.isScrolling){return;}
   	this.points.push({x: gestureState.moveX, y: gestureState.moveY});
 
   	if (gestureState.dy > 0 && !this.checkCollapsed) {
@@ -257,6 +273,14 @@ export default class SwipePlaylist extends Component{
 	        hasRef={ref => (this.swipeIconRef = ref)}
 	      />
       </TouchableOpacity>
+      <Gradient 
+        style={{
+          opacity: 0
+        }}
+        ref={ref => (this.linearGradientRef = ref)}
+        colors={[`rgba(${this.backgroundColor.rgb.join(", ")}, 1)`, `rgba(${this.backgroundColor.rgb.join(", ")}, 0.0)`]}
+        start={{x: 0, y: 0}} end={{x: 0, y: 1}}
+      />
       <ScrollView
       	style={[
       		styles.wrapScroll,
@@ -267,15 +291,21 @@ export default class SwipePlaylist extends Component{
       	ref={ref => (this.scrollRef = ref)}
       	scrollEnabled={!collapsed}
 				onScroll={({nativeEvent})=>{
+          clearTimeout(this.timeoutScrolling);
 					let y = nativeEvent.contentOffset.y;
 					this.scrollY = y;
+          this.isScrolling = true;
+          this.timeoutScrolling = setTimeout(()=>{
+            this.isScrolling = false;
+          }, 300);
 				}}
-				contentContainerStyle={{paddingBottom: NAVBAR_HEIGHT}}
+				contentContainerStyle={{paddingBottom: (NAVBAR_HEIGHT+15)}}
 				showsVerticalScrollIndicator={false}
 				showsHorizontalScrollIndicator={false}
       >
       	{container}
       </ScrollView>
+      <View style={styles.navbarView}/>
   	</View>
   }
 }
@@ -312,6 +342,31 @@ class SwipeIcon extends Component {
   }
 }
 
+class Gradient extends Component{
+  constructor(props) {
+    super(props);
+    this.state = {...this.props};
+  }
+
+  componentDidMount(){
+    this.props.hasRef && this.props.hasRef(this);
+  }
+
+  setNativeProps(props){
+    this.setState({...props});
+  }
+
+  render(){
+    const {style, colors, start, end} = this.state;
+
+    return <LinearGradient 
+      style={[styles.linearGradient, style]}
+      colors={colors}
+      start={start} end={end}
+    />
+  }
+}
+
 const styles = StyleSheet.create({
   wrapSwipe: {
     padding: 0,
@@ -324,5 +379,23 @@ const styles = StyleSheet.create({
   },
   wrapScroll: {
   	flex: 1,
+    zIndex: 1
+  },
+  linearGradient: {
+    position: "absolute",
+    top: 40,
+    left: 0,
+    right: 0,
+    height: 20,
+    zIndex: 9
+  },
+  navbarView : {
+    position: "absolute",
+    backgroundColor: "rgba(0, 0, 0, .7)",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: NAVBAR_HEIGHT,
+    zIndex: 9
   }
 });

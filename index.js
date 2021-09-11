@@ -8,7 +8,9 @@ import {name as appName} from './app.json';
 import TrackPlayer, { Capability } from 'react-native-track-player';
 
 TrackPlayer.setupPlayer({
-    maxCacheSize: 100000
+    maxBuffer: 50,
+    maxCacheSize: 4096,
+    waitForBuffer: true
 });
 
 TrackPlayer.updateOptions({

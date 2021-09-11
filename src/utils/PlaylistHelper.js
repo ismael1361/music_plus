@@ -61,8 +61,8 @@ export default class PlaylistHelper{
 	    const pList = dataStorager.get("PreviewPlayerList");
 
 	    if(Array.isArray(pList) && pList.length > 0 && pList[pList.length-1]?.browseId === browseId){
-				TrackPlayer.skip(0);
-				TrackPlayer.play();
+				await TrackPlayer.skip(0);
+				await TrackPlayer.play();
 	    	resolve();
 	    	return;
 	    }
@@ -109,7 +109,7 @@ export default class PlaylistHelper{
 		return new Promise(async (resolve, reject)=>{
 			await TrackPlayer.reset();
 		  if(Array.isArray(listMusics) && listMusics.length > 0){
-				TrackPlayer.add(listMusics);
+				await TrackPlayer.add(listMusics);
 		  }
 	    dataStorager.set("MusicPlayerList", [], true);
 	    dataStorager.set("PlaylistInitialized", true);
@@ -133,7 +133,7 @@ export default class PlaylistHelper{
 
 		index = typeof index === "number" ? index : 0;
 
-		this.pushTrackMusic(list[index]).then(()=>{
+		this.pushTrackMusic(list[index]).then(async ()=>{
 
 			let previewPlayerList = dataStorager.get("PreviewPlayerList");
 
@@ -143,7 +143,7 @@ export default class PlaylistHelper{
 
 			if((index/(list.length-1)) >= 0.15 && !player){
 				player = true;
-				TrackPlayer.play();
+				await TrackPlayer.play();
 			}
 
 			if(index < list.length){
@@ -159,7 +159,7 @@ export default class PlaylistHelper{
 				return;
 			}
 
-			TrackPlayer.getQueue().then((queue)=>{
+			await TrackPlayer.getQueue().then((queue)=>{
 				music.getStreamings().then(async (url)=>{
 					let capa_image = music.thumbnails[music.thumbnails.length-1]["url"];
 
@@ -189,7 +189,7 @@ export default class PlaylistHelper{
 
 				    dataStorager.set("MusicPlayerList", playerListNow, true);
 
-						TrackPlayer.add({
+						await TrackPlayer.add({
 							id: queue.length,
 							url: url[0]["url"],
 							title: music.title,
@@ -216,8 +216,11 @@ export default class PlaylistHelper{
 		setState = _a[1];
 
 		const [index, setIndex] = react1.useState(-1);
+		const indexRef = react1.useRef();
+		
 		const stateRef = react1.useRef();
 
+		indexRef.current = index;
 		stateRef.current = state;
 
 		useTrackPlayerEvents([Event.PlaybackTrackChanged, Event.PlaybackState], async event => {
@@ -246,8 +249,8 @@ export default class PlaylistHelper{
 
 		react1.useEffect(()=>{
 			(async ()=>{
-				if(index >= 0){
-					dataStorager.deleteListener("PreviewPlayerList", index);
+				if(indexRef.current >= 0){
+					dataStorager.deleteListener("PreviewPlayerList", indexRef.current);
 				}
 
 				let a = dataStorager.get("PreviewPlayerList"), 
@@ -292,8 +295,8 @@ export default class PlaylistHelper{
 			})();
 
 			return ()=>{
-				if(index >= 0){
-					dataStorager.deleteListener("PreviewPlayerList", index);
+				if(indexRef.current >= 0){
+					dataStorager.deleteListener("PreviewPlayerList", indexRef.current);
 				}
 			}
 		}, []);

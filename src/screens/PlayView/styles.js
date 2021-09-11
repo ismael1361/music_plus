@@ -162,6 +162,7 @@ export const SwipeHidden = styled.TouchableOpacity`
 
 export const PlaylistView = styled.View`
   flex-direction: column;
+  padding-top: 20px;
 `;
 
 export const PlaylistElement = styled.TouchableOpacity`

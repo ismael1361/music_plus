@@ -325,15 +325,120 @@ export default class YoutubeMusic{
     })
   }
 
+  static getGenresCategoryList(params, clickTrackingParams){
+    return new Promise((resolve, reject)=>{
+      this._createApiRequest('browse', {
+        browseId: "FEmusic_moods_and_genres_category",
+        params: params,
+        context: {
+          clickTracking: {
+            clickTrackingParams: clickTrackingParams
+          }
+        }
+      }).then(context => {
+        try {
+          const result = parsers.parseGenresCategoryList(context);
+
+          console.log(JSON.stringify(result, null, 2));
+
+          resolve(result);
+        } catch (error) {
+          reject(new Result(-1, error.message, null, {}));
+        }
+      }).catch(error => reject(new Result(-1, error.message, null, {})));
+    });
+  }
+
   static getStreaming(videoId){
     return new Promise((resolve, reject) => {
       try {
-        ytdl('https://music.youtube.com/watch?v='+videoId, { quality: 'highestaudio' })
-        .then(resolve)
-        .catch(error => reject(new Result(-1, error.message, null, {})));
+        fetch("https://api.snappea.com/v1/video/details?url=https://music.youtube.com/watch?v="+videoId).then(r => {
+          return r.json();
+        }).then((r)=>{
+          let url = "";
+          let tagId = "";
+
+          try{
+            let list = r.videoInfo.downloadInfoList.filter(v => (v.size <= 5000000 && v.mime === "audio"));
+
+            let download = list[list.length-1];
+
+            url = download.partList[0].urlList[0];
+            tagId = download.tag;
+
+            var myInit = { method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              mode: 'cors',
+              cache: 'default',
+              body: JSON.stringify({
+                tagId: tagId,
+                url: url
+              })
+            };
+
+            var myRequest = new Request("https://api.snappea.com/v1/video/convert?videoKey=youtube_"+videoId+"&language=pt", myInit);
+
+            return fetch(myRequest);
+          } catch(error) {
+            return Promise.reject(error);
+          }
+        }).then(t => {
+          return t.json();
+        }).then((d)=>{
+          resolve([{
+            "url": d?.downloadUrl,
+            "headers": []
+          }]);
+        }).catch(()=>{
+          ytdl('https://music.youtube.com/watch?v='+videoId, { quality: 'highestaudio' }).then(resolve).catch(error => reject(new Result(-1, error.message, null, {})));
+        });
       } catch (error) {
         reject(new Result(-1, "Erro ao adquirir streaming de áudio!", null, {}));
       }
     })
   }
 }
+
+/*console.clear();
+
+let videoId = "IxVuT8cgccM";
+
+fetch("https://api.snappea.com/v1/video/details?url=https://music.youtube.com/watch?v="+videoId).then(r => r.json()).then((r)=>{
+   let url = "";
+   let tagId = "";
+
+   let download = r?.videoInfo?.downloadInfoList[0];
+
+   url = download?.partList[0]?.urlList[0];
+
+   tagId = download?.tag;
+
+   var myInit = { method: 'POST',
+                 headers: {
+                    'Content-Type': 'application/json',
+                 },
+                 mode: 'cors',
+                 cache: 'default',
+                 body: JSON.stringify({tagId: tagId,
+                 url: url})
+                };
+
+   var myRequest = new Request("https://api.snappea.com/v1/video/convert?videoKey=youtube_"+videoId+"&language=pt", myInit);
+
+   fetch(myRequest).then(t => t.json()).then((d)=>{
+
+      console.log(d);
+      
+      let audioSource = document.getElementById("audioSource");
+      
+      var audio = new Audio(d.downloadUrl);
+      
+      audio.oncanplaythrough = ()=>{
+         audio.play();
+      }
+      
+      audioSource.src = d.downloadUrl;
+   }).catch(console.log);
+}).catch(console.log);*/

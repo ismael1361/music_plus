@@ -10,6 +10,9 @@ module.exports = async function() {
 	});
 
 	TrackPlayer.addEventListener('remote-next', async () => {
+		TrackPlayer.skipToNext();
+
+		return;
 		let index = await TrackPlayer.getCurrentTrack();
 		let queue = await TrackPlayer.getQueue();
 		if(index >= (queue.length - 1)){
@@ -20,6 +23,9 @@ module.exports = async function() {
 	});
 
 	TrackPlayer.addEventListener('remote-previous', async () => {
+		TrackPlayer.skipToPrevious();
+
+		return;
 		let index = await TrackPlayer.getCurrentTrack();
 		if(index <= 0){
 			let queue = await TrackPlayer.getQueue();

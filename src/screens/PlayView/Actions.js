@@ -23,13 +23,13 @@ export default ({ disabled, onNext, onPrevious, onShuffled, onLooped })=>{
     //console.log(JSON.stringify(event, null, 2));
   });
 
-	const onButtonPressed = ()=>{
+	const onButtonPressed = async ()=>{
 		if(disabled === true){return;}
 		if (!isPlaying) {
-			TrackPlayer.play();
+			await TrackPlayer.play();
 			setIsPlaying(true);
 		} else {
-			TrackPlayer.pause();
+			await TrackPlayer.pause();
 			setIsPlaying(false);
 		}
 	};
@@ -40,14 +40,14 @@ export default ({ disabled, onNext, onPrevious, onShuffled, onLooped })=>{
 		let currentIndex = index;
 
 		if(index >= (queue.length - 1)){
-			TrackPlayer.skip(0);
+			await TrackPlayer.skip(0);
 			currentIndex = 0;
 		}else{
 			currentIndex += 1;
-			TrackPlayer.skipToNext();
+			await TrackPlayer.skipToNext();
 		}
 
-		TrackPlayer.play();
+		await TrackPlayer.play();
 
 		if(typeof onNext === "function"){
 			onNext(currentIndex);
@@ -61,13 +61,13 @@ export default ({ disabled, onNext, onPrevious, onShuffled, onLooped })=>{
 		if(index <= 0){
 			let queue = await TrackPlayer.getQueue();
 			currentIndex = queue.length - 1;
-			TrackPlayer.skip(queue.length - 1);
+			await TrackPlayer.skip(queue.length - 1);
 		}else{
 			currentIndex -= 1;
-			TrackPlayer.skipToPrevious();
+			await TrackPlayer.skipToPrevious();
 		}
 
-		TrackPlayer.play();
+		await TrackPlayer.play();
 
 		if(typeof onPrevious === "function"){
 			onPrevious(currentIndex);
@@ -82,10 +82,10 @@ export default ({ disabled, onNext, onPrevious, onShuffled, onLooped })=>{
 		}
 	}
 
-	const loop = ()=>{
+	const loop = async ()=>{
 		let v = (typeLoop + 1) % 3;
 		let modeList = [RepeatMode.Off, RepeatMode.Track, RepeatMode.Queue];
-		TrackPlayer.setRepeatMode(modeList[v]);
+		await TrackPlayer.setRepeatMode(modeList[v]);
 		setTypeLoop(v);
 		if(typeof onLooped === "function"){
 			onLooped(v);

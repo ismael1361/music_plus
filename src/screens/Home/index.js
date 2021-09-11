@@ -39,13 +39,18 @@ export default ()=>{
     PlaylistHelper.playPlaylist(navigation, a.browse.browseId, "ALBUM");
   }
 
+  const genresItens = (g)=>{
+    console.log(g);
+    YoutubeMusic.getGenresCategoryList(g.browse.params, g.browse.clickTrackingParams).then(()=>{});
+  }
+
   return <ContainerScreen scroll={true} GeneralStatusBar={{
     backgroundColor: "rgba(0, 0, 0, 0.2)",
     barStyle: "light-content"
   }}>
     {loading && <LoadingIcon size="large" color="#FFFFFF" />}
 
-    <GenresItens genres={dataHome.genres || []} onPress={console.log}/>
+    <GenresItens genres={dataHome.genres || []} onPress={genresItens}/>
 
     <MusicItens list={dataHome.content || []} onPress={goToMusic}/>
 

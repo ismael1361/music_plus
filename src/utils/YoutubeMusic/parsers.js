@@ -1002,3 +1002,39 @@ exports.parseNextPanel = (context) => {
     });
   return result;
 };
+
+exports.parseGenresCategoryList = (context)=>{
+  let result = [];
+
+  const panelContext = utils.fv(context, 'sectionListRenderer:contents');
+
+  if(Array.isArray(panelContext)){
+    panelContext.forEach((list)=>{
+      let item = {
+        title: "",
+        list: []
+      }
+
+      item.title = utils.fv(list, 'header:runs:text');
+
+      let content = utils.fv(list, 'items');
+
+      if(Array.isArray(content[0])){
+        content[0].forEach((v)=>{
+          item.list.push({
+            title: _.nth(utils.fv(v, 'title:runs:text'), 0),
+            subtitle: _.join(utils.fv(v, 'subtitle:runs:text'), ""),
+            thumbnails: utils.fv(v, 'thumbnail:thumbnails'),
+            trackingParams: _.nth(utils.fv(v, 'trackingParams'), 0),
+            browseId: _.nth(utils.fv(v, 'navigationEndpoint:browseEndpoint:browseId'), 0)
+          });
+
+        });
+      }
+
+      result.push(item);
+    });
+  }
+
+  return result;
+}
