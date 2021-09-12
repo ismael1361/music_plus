@@ -29,11 +29,35 @@ export const ButtonContainer = styled.TouchableOpacity`
   border-style: solid;
   border-bottom-color: rgba(0, 0, 0, 0.1);
   border-bottom-width: 1px;
+  align-items: center;
 `;
 
 export const ButtonText = styled.Text`
   color: ${(props)=>{return (typeof props.color === "string" ? props.color : "#eceff1")}};
   font-size: 20px;
   flex: 1;
+`;
+
+//LabelContainer, LabelText, LabelValue
+
+export const LabelContainer = styled.View`
+  padding: 5px 15px;
+  flex-direction: row;
+  border-style: solid;
+  border-bottom-color: rgba(0, 0, 0, 0.1);
+  border-bottom-width: 1px;
+  align-items: center;
+`;
+
+export const LabelText = styled.Text`
+  color: ${(props)=>{return (typeof props.color === "string" ? props.color : "#eceff1")}};
+  font-size: 18px;
+  flex: 1;
+`;
+
+export const LabelValue = styled.Text`
+  color: ${(props)=>{return (typeof props.color === "string" ? props.color : "#eceff1")}};
+  font-size: 18px;
   padding-left: 15px;
+  font-weight: bold;
 `;

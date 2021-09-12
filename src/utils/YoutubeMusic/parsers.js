@@ -1003,38 +1003,129 @@ exports.parseNextPanel = (context) => {
   return result;
 };
 
-exports.parseGenresCategoryList = (context)=>{
-  let result = [];
+/*
+[
+  ['context', ['fv', 'sectionListRenderer:contents']],
+  ['result', {
+    title: ['context', ['fv', 'header:runs:text']],
+    list: ['context', ['fv', 'items'], {
+      title: ['context', ['nth', ['fv', 'title:runs:text']]]
+    }]
+  }]
+]
+*/
 
-  const panelContext = utils.fv(context, 'sectionListRenderer:contents');
-
-  if(Array.isArray(panelContext)){
-    panelContext.forEach((list)=>{
-      let item = {
-        title: "",
-        list: []
-      }
-
-      item.title = utils.fv(list, 'header:runs:text');
-
-      let content = utils.fv(list, 'items');
-
-      if(Array.isArray(content[0])){
-        content[0].forEach((v)=>{
-          item.list.push({
-            title: _.nth(utils.fv(v, 'title:runs:text'), 0),
-            subtitle: _.join(utils.fv(v, 'subtitle:runs:text'), ""),
-            thumbnails: utils.fv(v, 'thumbnail:thumbnails'),
-            trackingParams: _.nth(utils.fv(v, 'trackingParams'), 0),
-            browseId: _.nth(utils.fv(v, 'navigationEndpoint:browseEndpoint:browseId'), 0)
-          });
-
-        });
-      }
-
-      result.push(item);
-    });
+/*
+{
+  'panelContext': ['fv', ['get', 'context'], 'sectionListRenderer:contents'],
+  'result': {
+    'title': {
+      'result': ['fv', ['get', 'panelContext'], 'header:runs:text']
+    },
+    'list': {
+      'content': ['nth', ['fv', ['get', 'panelContext'], 'items'], 0],
+      'result': ['map', {
+        'title': ['nth', ['fv', ['get', 'content'], 'title:runs:text'], 0],
+        'result': {
+          'title': ['get', 'title']
+        }
+      }]
+    }
   }
+}
+*/
+
+const renderContext = (context, conf, type)=>{
+  let result = (type && type === "object" ? {} : []);
+  try{
+    conf = Object.assign({
+      variables : {},
+      result: {}
+    }, conf);
+
+    let k, variables = {context: context};
+
+    let v = (type, valor, prop)=>{
+      valor = Array.isArray(valor) ? v.apply(null, valor) : valor;
+
+      switch(type){
+        case "get":
+          return valor in variables ? variables[valor] : null;
+        case "fv":
+          return utils.fv(valor, prop);
+        case "nth":
+        case "join":
+        case "at":
+        case "dropRight":
+          return _[type](valor, prop);
+        case "map":
+          valor = Array.isArray(valor) ? valor : [valor];
+          return valor.map((v, i)=>{
+            prop = Object.assign({
+              variables : {},
+              result: {}
+            }, prop);
+
+            prop.variables = Object.assign(variables, prop.variables);
+            prop.variables.context = v;
+
+            return renderContext(v, prop);
+          });
+        default:
+          return null;
+      }
+    }
+
+    for(k in conf.variables){
+      variables[k] = Array.isArray(conf.variables[k]) ? v.apply(null, conf.variables[k]) : conf.variables[k];
+    }
+
+    if(!Array.isArray(conf.result) && typeof conf.result === "object"){
+      result = {};
+      for(k in conf.result){
+        result[k] = Array.isArray(conf.result[k]) ? v.apply(null, conf.result[k]) : conf.result[k];
+      }
+    }else if(Array.isArray(conf.result)){
+      result = v.apply(null, conf.result);
+    }
+
+    return result;
+  }catch(e){
+    return result;
+  }
+}
+
+exports.parseGenresCategoryList = (context)=>{
+  let result = renderContext(context, {
+    variables: {
+      panelContext: ['fv', ['get', 'context'], 'sectionListRenderer:contents']
+    },
+    result: ['map', ['get', 'panelContext'], {
+      variables: {
+        title: ['fv', ['get', 'context'], 'header:runs:text'],
+        list: ['nth', ['fv', ['get', 'context'], 'items'], 0]
+      },
+      result: {
+        title: ['get', 'title'],
+        list: ['map', ['get', 'list'], {
+          variables: {
+            title: ['nth', ['fv', ['get', 'context'], 'title:runs:text'], 0],
+            subtitle: ['join', ['fv', ['get', 'context'], 'subtitle:runs:text'], ""],
+            trackingParams: ['nth', ['fv', ['get', 'context'], 'trackingParams'], 0],
+            browseId: ['nth', ['fv', ['get', 'context'], 'navigationEndpoint:browseEndpoint:browseId'], 0],
+            thumbnails: ['fv', ['get', 'context'], 'thumbnail:thumbnails']
+          },
+          result: {
+            title: ['get', 'title'],
+            subtitle: ['get', 'subtitle'],
+            trackingParams: ['get', 'trackingParams'],
+            browseId: ['get', 'browseId'],
+            thumbnails: ['get', 'thumbnails'],
+          }
+        }]
+      }
+    }]
+  });
 
   return result;
 }

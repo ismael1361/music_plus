@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { LayoutAnimation } from 'react-native';
 
 import { CapaMusic, CapaMusicBackground, CapaMusicActions, CapaMusicActionsBtn, CapaMusicLoadingIcon } from './styles';
 
@@ -14,6 +15,7 @@ export default ({ image, color, disabled, isLoading })=>{
   const [capaActionsVisible, setCapaActionsVisible] = useState(false);
 
   const showCapaActions = ()=>{
+    //LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setCapaActionsVisible(!capaActionsVisible);
 
     clearTimeout(_showCapaActionsTimeout);

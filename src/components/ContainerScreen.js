@@ -12,24 +12,26 @@ const Container = styled.View`
 `;
 
 const ContainerScroll = styled.ScrollView`
-  padding-top: ${STATUSBAR_HEIGHT}px;
+  padding-top: ${(props)=>{return props.statusbarSize === true ? STATUSBAR_HEIGHT : 0}}px;
   flex: 1;
 `;
 
 const ContainerView = styled.View`
-  padding-top: ${STATUSBAR_HEIGHT}px;
+  padding-top: ${(props)=>{return props.statusbarSize === true ? STATUSBAR_HEIGHT : 0}}px;
   flex: 1;
   justify-content: center;
   align-items: center;
 `;
 
-export default ({GeneralStatusBar, scroll, backgroundColor, ...props})=>{
+export default ({GeneralStatusBar, scroll, backgroundColor, statusbarSize, ...props})=>{
 	setPropsStatusBar(GeneralStatusBar);
 
+	statusbarSize = typeof statusbarSize !== "boolean" ? true : statusbarSize;
+
 	return (<Container backgroundColor={backgroundColor}>
-	  {scroll === true ? (<ContainerScroll contentContainerStyle={{flexGrow: 1}}>
+	  {scroll === true ? (<ContainerScroll statusbarSize={statusbarSize} contentContainerStyle={{flexGrow: 1}}>
 			{props.children}
-		</ContainerScroll>) : (<ContainerView>
+		</ContainerScroll>) : (<ContainerView statusbarSize={statusbarSize}>
 			{props.children}
 		</ContainerView>)}
 	</Container>)

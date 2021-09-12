@@ -339,7 +339,7 @@ export default class YoutubeMusic{
         try {
           const result = parsers.parseGenresCategoryList(context);
 
-          console.log(JSON.stringify(result, null, 2));
+          //console.log(JSON.stringify(result, null, 2));
 
           resolve(result);
         } catch (error) {
@@ -359,7 +359,11 @@ export default class YoutubeMusic{
           let tagId = "";
 
           try{
-            let list = r.videoInfo.downloadInfoList.filter(v => (v.size <= 5000000 && v.mime === "audio"));
+            let list = r.videoInfo.downloadInfoList.filter(v => (v.mime === "audio"));
+
+            if(list.length > 1){
+              list = list.filter(v => (v.size <= 5000000));
+            }
 
             let download = list[list.length-1];
 

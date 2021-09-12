@@ -41,7 +41,8 @@ export default ()=>{
 
   const genresItens = (g)=>{
     console.log(g);
-    YoutubeMusic.getGenresCategoryList(g.browse.params, g.browse.clickTrackingParams).then(()=>{});
+
+    navigation.navigate("GenresCategory", g);
   }
 
   return <ContainerScreen scroll={true} GeneralStatusBar={{
