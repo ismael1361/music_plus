@@ -11,6 +11,28 @@ const dataStorager = MultiStorager.DataStorager;
 const react1 = require('react');
 
 export default class PlaylistHelper{
+	static getPlaylistForBrowseId(browseId){
+		return new Promise((resolve, reject)=>{
+			let list = [];
+			YoutubeMusic.getPlaylist(browseId).then((result)=>{
+				try{
+					result?.content.forEach((t)=>{
+						let {videoId, duration, name, author, thumbnails} = t;
+						let subtitle = Array.isArray(author) ? author.map(v=>v.name).join(" • ") : (author.name || "");
+
+						list.push(new TrackMusic(null, videoId, null, null, name, subtitle, duration, thumbnails));
+					});
+
+					resolve(list);
+				}catch(error){
+					reject(new Result(-1, error.message, null, {}));
+				}
+      	console.log(JSON.stringify(result, null, 2));
+      	setContent(result);
+      }).catch(reject);
+		});
+	}
+
 	static getPlaylistForAlbum(browseId){
 		return new Promise((resolve, reject)=>{
 			let list = [];
@@ -19,7 +41,7 @@ export default class PlaylistHelper{
 					result.forEach((t)=>{
 						let {videoId, playlistId, params, title, subtitle, thumbnails} = t;
 
-						list.push(new TrackMusic(null, videoId, playlistId, params, title, subtitle, thumbnails));
+						list.push(new TrackMusic(null, videoId, playlistId, params, title, subtitle, null, thumbnails));
 					});
 
 					let last = list[list.length-1] && "videoId" in list[list.length-1] ? list[list.length-1]["videoId"] : null;
@@ -34,7 +56,7 @@ export default class PlaylistHelper{
 							c.content.forEach((t)=>{
 								let {videoId, playlistId, params, title, subtitle, thumbnails} = t;
 
-								list.push(new TrackMusic(null, videoId, playlistId, params, title, subtitle, thumbnails));
+								list.push(new TrackMusic(null, videoId, playlistId, params, title, subtitle, null, thumbnails));
 							});
 
 							resolve(list);

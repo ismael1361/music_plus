@@ -5,18 +5,33 @@ import { YoutubeMusic } from '../utils';
 import ImageColors from 'react-native-image-colors';
 
 export default class TrackMusic extends FirestoreObject {
-  constructor(path, videoId, playlistId, params, title, subtitle, thumbnails, streamings) {
+  constructor(path, videoId, playlistId, params, title, subtitle, duration, thumbnails, streamings) {
     super(path);
     this.videoId = videoId || '';
     this.playlistId = playlistId || '';
     this.params = params || '';
     this.title = title || '';
     this.subtitle = subtitle || '';
+    this.duration = duration || 0;
     this.thumbnails = thumbnails || [];
     this.streamings = streamings || [];
 
     this.colorTheme = {"muted": "#263238", "darkMuted": "#263238", "lightVibrant": "#263238", "vibrant": "#607d8b", "average": "#37474f", "darkVibrant": "#263238", "lightMuted": "#263238", "dominant": "#78909c"};
     this.colorThemeRequired = false;
+  }
+
+  getDuration(){
+    let duration = typeof this.duration === "number" ? this.duration : 0;
+    duration = duration/1000;
+    let hours = Math.floor(duration / 3600);
+    let minutes = Math.floor((duration - (hours * 3600)) / 60);
+    let seconds = Math.floor((duration - (hours * 3600) - (minutes * 60)));
+
+    let getDecimalStr = (n)=>{
+      return String(n <= 9 ? "0"+n : n);
+    }
+
+    return `${hours > 0 ? getDecimalStr(hours)+':' : ''}${getDecimalStr(minutes)}:${getDecimalStr(seconds)}`;
   }
 
   getColorTheme(){

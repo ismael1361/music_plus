@@ -86,4 +86,5 @@ export const ContentListItemTitle = styled.Text`
 export const ContentListItemSubtitle = styled.Text`
 	font-size: 13px;
 	margin-top: 5px;
+	opacity: .6;
 `;

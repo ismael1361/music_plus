@@ -2,6 +2,7 @@ import Preload from "./Preload";
 import SignIn from "./SignIn";
 import Home from "./Home";
 import GenresCategory from "./GenresCategory";
+import Playlist from "./Playlist";
 import Search from "./Search";
 import Play from "./Play";
 import MayPlaylist from "./MayPlaylist";
@@ -13,6 +14,7 @@ export {
   SignIn,
   Home,
   GenresCategory,
+  Playlist,
   Search,
   Play, 
   MayPlaylist, 
