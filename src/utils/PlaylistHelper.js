@@ -10,24 +10,54 @@ const dataStorager = MultiStorager.DataStorager;
 
 const react1 = require('react');
 
+const _ = require('lodash');
+
+const getAllColorThemeBy = (listMusics, callback)=>{
+	return new Promise((resolve, reject) => {
+		Promise.all(listMusics.map(async (music, i)=>{
+			music = new TrackMusic().parse(null, music);
+
+			await music.getColorTheme();
+
+			callback(music, i);
+
+      return music;
+    })).then((list)=>{
+      resolve(list);
+    }).catch(reject);
+	});
+}
+
 export default class PlaylistHelper{
 	static getPlaylistForBrowseId(browseId){
 		return new Promise((resolve, reject)=>{
+			if(dataStorager.hasKey("Playlist_"+browseId)){
+				let r = dataStorager.get("Playlist_"+browseId).map(t => new TrackMusic().parse(null, t));
+
+				resolve(r);
+				return;
+			}
+
 			let list = [];
-			YoutubeMusic.getPlaylist(browseId).then((result)=>{
+
+			const byResult = (r)=>{
+				dataStorager.set("Playlist_"+browseId, r.map(t => t.toJson()));
+				resolve(r);
+			}
+
+			YoutubeMusic.getPlaylist(browseId, 60).then((result)=>{
 				try{
 					result?.content.forEach((t)=>{
 						let {videoId, duration, name, author, thumbnails} = t;
 						let subtitle = Array.isArray(author) ? author.map(v=>v.name).join(" • ") : (author.name || "");
 
-						list.push(new TrackMusic(null, videoId, null, null, name, subtitle, duration, thumbnails));
+						list.push(new TrackMusic(null, browseId, videoId, null, null, name, subtitle, duration, (Array.isArray(thumbnails) ? thumbnails : [thumbnails])));
 					});
 
-					resolve(list);
+					byResult(list);
 				}catch(error){
 					reject(new Result(-1, error.message, null, {}));
 				}
-      	console.log(JSON.stringify(result, null, 2));
       	setContent(result);
       }).catch(reject);
 		});
@@ -35,19 +65,32 @@ export default class PlaylistHelper{
 
 	static getPlaylistForAlbum(browseId){
 		return new Promise((resolve, reject)=>{
+			if(dataStorager.hasKey("Playlist_"+browseId)){
+				let r = dataStorager.get("Playlist_"+browseId).map(t => new TrackMusic().parse(null, t));
+
+				resolve(r);
+				return;
+			}
+
 			let list = [];
+
+			const byResult = (r)=>{
+				dataStorager.set("Playlist_"+browseId, r.map(t => t.toJson()));
+				resolve(r);
+			}
+
 			YoutubeMusic.getAllPlaylistId(browseId).then((playlistId)=>{
 				YoutubeMusic.getPlaylistById(playlistId[0]).then((result)=>{
 					result.forEach((t)=>{
 						let {videoId, playlistId, params, title, subtitle, thumbnails} = t;
 
-						list.push(new TrackMusic(null, videoId, playlistId, params, title, subtitle, null, thumbnails));
+						list.push(new TrackMusic(null, browseId, videoId, playlistId, params, title, subtitle, null, thumbnails));
 					});
 
 					let last = list[list.length-1] && "videoId" in list[list.length-1] ? list[list.length-1]["videoId"] : null;
 
 					if(!last){
-						resolve(list);
+						byResult(list);
 						return;
 					}
 
@@ -56,10 +99,10 @@ export default class PlaylistHelper{
 							c.content.forEach((t)=>{
 								let {videoId, playlistId, params, title, subtitle, thumbnails} = t;
 
-								list.push(new TrackMusic(null, videoId, playlistId, params, title, subtitle, null, thumbnails));
+								list.push(new TrackMusic(null, browseId, videoId, playlistId, params, title, subtitle, null, thumbnails));
 							});
 
-							resolve(list);
+							byResult(list);
 						} catch (error) {
 		          reject(new Result(-1, error.message, null, {}));
 		        }
@@ -69,12 +112,28 @@ export default class PlaylistHelper{
 		});
 	}
 
-	static playPlaylist(navigation, browseId, type){
-		return new Promise(async (resolve, reject)=>{
-			const typeList = ["ALBUM"];
-			const promiseForType = ["getPlaylistForAlbum"];
+	static getPlaylistBy(browseId){
+		if(_.startsWith(browseId, 'VL') || _.startsWith(browseId, 'PL')){
+			return this.getPlaylistForBrowseId(browseId);
+		}else if(_.startsWith(browseId, 'MPREb')){
+			return this.getPlaylistForAlbum(browseId);
+		}else{
+			return Promise.resolve([]);
+		}
+	}
 
-			if(typeList.includes(type) !== true){return;}
+	static playPlaylist(navigation, browseId, list, skipTo){
+		return new Promise(async (resolve, reject)=>{
+			if(Array.isArray(list) !== true){
+	    	resolve();
+	    	return;
+			}
+
+			const isValidList = Array.isArray(list) ? list.map(t => t instanceof TrackMusic).every(Boolean) : false;
+
+			if(!isValidList){
+				list = list.map(t => new TrackMusic().parse(null, t));
+			}
 
 			navigation.navigate("PlayView", {
 	      type: "loading"
@@ -82,8 +141,12 @@ export default class PlaylistHelper{
 
 	    const pList = dataStorager.get("PreviewPlayerList");
 
+	    let indexNow = await TrackPlayer.getCurrentTrack();
+
 	    if(Array.isArray(pList) && pList.length > 0 && pList[pList.length-1]?.browseId === browseId){
-				await TrackPlayer.skip(0);
+				if(typeof skipTo === "number" && skipTo !== indexNow){
+					await TrackPlayer.skip(skipTo%pList.length);
+				}
 				await TrackPlayer.play();
 	    	resolve();
 	    	return;
@@ -91,20 +154,20 @@ export default class PlaylistHelper{
 
 	    await this.trackPlayerInit();
 
-	    let r = null, i = typeList.indexOf(type);
+    	dataStorager.set("PlayerListId", list[0]["browseId"], true);
 
-	    if(i >= 0 && i < promiseForType.length){
-	    	r = this[promiseForType[i]](browseId);
-	    }else{
-	    	return;
-	    }
+    	YoutubeMusic.getStreamingList(list.map(v => v.videoId)).then((streamings)=>{
+    		let result = [];
 
-			r.then(async (result)=>{
-				//console.log(JSON.stringify(result[0], null, 2));
-	    	dataStorager.set("PlayerListId", result[0]["playlistId"], true);
-				//console.log(result.length);
+    		for(let i=0; i<list.length; i++){
+    			if(streamings[i].every(t=>{return t.url !== ""})){
+	    			list[i].streamings = streamings[i];
+	    			result.push(new TrackMusic().parse(null, list[i]));
+	    		}
+    		}
 
-				//result[0].getStreamings().then(console.log).catch(console.log);
+    		dataStorager.set("Playlist_"+browseId, result.map(t => t.toJson()));
+
 				let previewPlayerList = result.map((t, i) => {
 					return {
 						index: i, 
@@ -120,10 +183,11 @@ export default class PlaylistHelper{
 
 	    	dataStorager.set("PreviewPlayerList", previewPlayerList);
 
-				this.playByPlayList(result);
-
+				this.playByPlayList(result, skipTo);
 				resolve();
-	    }).catch(console.log);
+    	}).catch(()=>{
+    		navigation.goBack();
+    	});
 		});
 	}
 
@@ -140,91 +204,72 @@ export default class PlaylistHelper{
 		});
 	};
 
-	static playByPlayList(list, index, player){
-		let playlistId = dataStorager.get("PlayerListId");
+	static async playByPlayList(list, skipTo){
+		let browseId = dataStorager.get("PlayerListId");
 
-		if(list[0]["playlistId"] !== playlistId){
+		if(list[0]["browseId"] !== browseId){
 			return;
 		}
 
 		const isValidList = Array.isArray(list) ? list.map(t => t instanceof TrackMusic).every(Boolean) : false;
 
-		if(!isValidList || (Array.isArray(list) && index >= list.length)){
+		if(!isValidList){
 			return;
 		}
 
-		index = typeof index === "number" ? index : 0;
+		let trackList = list.map((music, i)=>{
+			let capa_image = music.thumbnails[music.thumbnails.length-1]["url"];
+			let streaming = music.streamings[0]["url"] || "";
 
-		this.pushTrackMusic(list[index]).then(async ()=>{
-
-			let previewPlayerList = dataStorager.get("PreviewPlayerList");
-
-			previewPlayerList[index].loaded = true;
-
-			dataStorager.set("PreviewPlayerList", previewPlayerList);
-
-			if((index/(list.length-1)) >= 0.15 && !player){
-				player = true;
-				await TrackPlayer.play();
+			return {
+				id: i,
+				url: streaming,
+				title: music.title,
+				album: "",
+				artist: music.subtitle,
+				artwork: capa_image,
 			}
-
-			if(index < list.length){
-				this.playByPlayList(list, index+1, player);
-			}
-		}).catch(console.log);
-	}
-
-	static pushTrackMusic(music){
-		return new Promise(async (resolve, reject)=>{
-			if(!(music instanceof TrackMusic)){
-				reject(new Result(-1, "Erro ao adicionar a música a play-list atual!", null, {}));
-				return;
-			}
-
-			await TrackPlayer.getQueue().then((queue)=>{
-				music.getStreamings().then(async (url)=>{
-					let capa_image = music.thumbnails[music.thumbnails.length-1]["url"];
-
-					music.getColorTheme().then(async ()=>{
-						let inPlayerList = dataStorager.get("PreviewPlayerList");
-
-						if(Array.isArray(inPlayerList) !== true || inPlayerList.length <= 0){
-							resolve();
-							return;
-						}
-
-						inPlayerList = inPlayerList.filter(t => {
-							return t.videoId === music.videoId
-						}).length >= 1;
-
-						if(inPlayerList !== true){
-							resolve();
-							return;
-						}
-
-						let playerListNow = dataStorager.get("MusicPlayerList");
-						playerListNow = Array.isArray(playerListNow) ? playerListNow : [];
-
-						music.index = playerListNow.length;
-
-						playerListNow.push(music.toJson());
-
-				    dataStorager.set("MusicPlayerList", playerListNow, true);
-
-						await TrackPlayer.add({
-							id: queue.length,
-							url: url[0]["url"],
-							title: music.title,
-							album: "",
-							artist: music.subtitle,
-							artwork: capa_image,
-						});
-
-						resolve();
-					}).catch(reject);
-				}).catch(reject);
-			}).catch(reject);
 		});
+
+		await list[0].getColorTheme();
+
+		await TrackPlayer.add(trackList);
+
+		getAllColorThemeBy(list, (m, i)=>{
+			let playerListNow = dataStorager.get("MusicPlayerList");
+			playerListNow = Array.isArray(playerListNow) ? playerListNow : [];
+
+			m = m.toJson();
+		  m.index = i;
+			playerListNow[i] = m;
+
+	    dataStorager.set("MusicPlayerList", playerListNow, true);
+		}).then((r)=>{});
+
+		let previewPlayerList = dataStorager.get("PreviewPlayerList");
+
+		previewPlayerList.forEach((t, i)=>{
+			previewPlayerList[i].loaded = true;
+		});
+
+		previewPlayerList[previewPlayerList.length-1].loaded = false;
+
+		dataStorager.set("PreviewPlayerList", previewPlayerList);
+
+	  dataStorager.set("MusicPlayerList", list.map((m, i)=>{
+	  	m = m.toJson();
+	  	m.index = i;
+	  	return m;
+	  }), true);
+
+	  if(typeof skipTo === "number"){
+			await TrackPlayer.skip(skipTo%list.length);
+		}
+		await TrackPlayer.play();
+
+		previewPlayerList[previewPlayerList.length-1].loaded = true;
+
+		dataStorager.set("PreviewPlayerList", previewPlayerList);
 	}
 
 	static useMusicPlaying(){
@@ -276,11 +321,13 @@ export default class PlaylistHelper{
 				}
 
 				let a = dataStorager.get("PreviewPlayerList"), 
-						isLoaded = new TrackMusic().toJson();
+						isLoaded = stateRef.current.loaded;
 
 				if(Array.isArray(a)){
-					let b = a.map(t => t.loaded) || [];
-					isLoaded = (b.filter(Boolean).length / b.length) >= 0.15;
+					let b = a.map(t => t.loaded) || [false];
+					isLoaded = a.length > 0 && b.every(Boolean);
+				}else{
+					isLoaded = false;
 				}
 
 				let i = await TrackPlayer.getCurrentTrack(), 
@@ -302,8 +349,8 @@ export default class PlaylistHelper{
 				let newIndex = dataStorager.addListener("PreviewPlayerList", async (a)=>{
 					if(!Array.isArray(a)){return;}
 
-					let b = a.map(t => t.loaded) || [];
-					let isLoaded = (b.filter(Boolean).length / b.length) >= 0.15;
+					let b = a.map(t => t.loaded) || [false];
+					let isLoaded = a.length > 0 && b.every(Boolean);
 
 					setState({
 						track: stateRef.current.track,

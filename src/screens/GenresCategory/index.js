@@ -15,7 +15,7 @@ export default ({ navigation, route })=>{
   const { params } = route;
 
   const toPlaylist = (playlist)=>{
-    console.log(JSON.stringify(playlist, null, 2));
+    //console.log(JSON.stringify(playlist, null, 2));
 
     navigation.navigate("Playlist", playlist);
   }

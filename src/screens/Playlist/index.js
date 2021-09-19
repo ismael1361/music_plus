@@ -13,7 +13,11 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { mdiPlay } from '@mdi/js';
 
-const Capa = ({ image, title, subtitle })=>{
+const Capa = ({ image, title, subtitle, disabled, onPress })=>{
+	const onPressFn = ()=>{
+		typeof onPress === "function" && onPress();
+	}
+
 	return <CapaThumbnail>
 		<CapaThumbnailImage source={{uri: image}} resizeMode="cover"/>
 		<CapaGradient 
@@ -25,7 +29,7 @@ const Capa = ({ image, title, subtitle })=>{
 				{typeof title === "string" && <CapaHeaderInfoTitle numberOfLines={2}>{title}</CapaHeaderInfoTitle>}
 				{typeof subtitle === "string" && <CapaHeaderInfoSubtitle numberOfLines={2}>{subtitle}</CapaHeaderInfoSubtitle>}
 			</CapaHeaderInfo>
-			<CapaButtonPlay>
+			<CapaButtonPlay disabled={disabled} onPress={onPressFn}>
 				<Svg viewBox="0 0 24 24" width="30" height="30" fill={"#ffff"}><Path d={mdiPlay}/></Svg>
 			</CapaButtonPlay>
 		</CapaHeader>
@@ -45,13 +49,15 @@ export default ({ navigation, route })=>{
 	}
 
 	useEffect(() => {
-    const { params } = route;
+    let { params } = route;
+
+    params = Object.assign(params.browse || {}, params);
 
     if(params.browseId !== browseId){
       setBrowseId(params.browseId);
       setContent([]);
-      PlaylistHelper.getPlaylistForBrowseId(params.browseId).then((result)=>{
-      	console.log(JSON.stringify(result, null, 2));
+      PlaylistHelper.getPlaylistBy(params.browseId).then((result)=>{
+      	//console.log(result);
       	setContent(result);
       }).catch(console.log);
     }
@@ -61,11 +67,17 @@ export default ({ navigation, route })=>{
     };
   }, [route]);
 
+  onPressPlay = (i)=>{
+  	PlaylistHelper.playPlaylist(navigation, browseId, content, typeof i === "number" ? i : 0);
+  }
+
   return <ContainerScreen scroll={true} statusbarSize={false} GeneralStatusBar={{
     backgroundColor: "rgba(0, 0, 0, 0.2)",
     barStyle: "light-content"
   }}>
-  	<Capa image={thumbnail} title={params?.title} subtitle={params?.subtitle}/>
+  	<Capa image={thumbnail} title={params?.title} subtitle={params?.subtitle} disabled={content.length < 1} onPress={()=>{
+	  	onPressPlay(0);
+	  }}/>
 
   	{content.length < 1 && <Loading size="large" color="#FFFFFF" />}
 
@@ -73,17 +85,19 @@ export default ({ navigation, route })=>{
 	  	{content.length > 0 && content.map((t, i)=>{
 	  		t = t instanceof TrackMusic ? t : new TrackMusic().parse(null, t);
 	  		let {title, subtitle, duration} = t;
-	  		duration = t.getDuration();
+	  		let d = t.getDuration();
 
 	  		return <TrackMusicListItem key={"TrackMusicListItem_"+i} style={{
 	  			borderBottomWidth: (i < (content.length-1) ? 1 : 0)
-	  		}}>
+	  		}} onPress={()=>{
+			  	onPressPlay(i);
+			  }}>
 	  			<TrackMusicListItemIndex>{((i+1) <= 9 ? "0" : "")+(i+1)}</TrackMusicListItemIndex>
 	  			<TrackMusicListItemHeader>
 	  				{typeof title === "string" && <TrackMusicListItemTitle numberOfLines={2}>{title}</TrackMusicListItemTitle>}
 	  				{typeof subtitle === "string" && <TrackMusicListItemSubtitle numberOfLines={1}>{subtitle}</TrackMusicListItemSubtitle>}
 	  			</TrackMusicListItemHeader>
-	  			{typeof duration === "string" && <TrackMusicListItemDuration>{duration}</TrackMusicListItemDuration>}
+	  			{(typeof d === "string" && duration > 0) && <TrackMusicListItemDuration>{d}</TrackMusicListItemDuration>}
 	  		</TrackMusicListItem>
 	  	})}
   	</TrackMusicList>

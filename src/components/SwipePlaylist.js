@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
   },
   navbarView : {
     position: "absolute",
-    backgroundColor: "rgba(0, 0, 0, .7)",
+    backgroundColor: "rgba(0, 0, 0, .3)",
     bottom: 0,
     left: 0,
     right: 0,

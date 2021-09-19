@@ -359,13 +359,19 @@ export default class YoutubeMusic{
           let tagId = "";
 
           try{
-            let list = r.videoInfo.downloadInfoList.filter(v => (v.mime === "audio"));
-
-            if(list.length > 1){
-              list = list.filter(v => (v.size <= 5000000));
+            if(r.statusCode < 0){
+              return Promise.reject();
             }
 
-            let download = list[list.length-1];
+            let list = r.videoInfo.downloadInfoList.filter(v => (v.mime === "audio"));
+            let list_filter = JSON.parse(JSON.stringify(list));
+
+            if(list.length > 1){
+              list_filter = list_filter.filter(v => (v.size <= 5000000));
+              list_filter = list_filter.length < 1 ? [list[list.length-1]] : list_filter;
+            }
+
+            let download = list_filter[list_filter.length-1];
 
             url = download.partList[0].urlList[0];
             tagId = download.tag;
@@ -396,12 +402,39 @@ export default class YoutubeMusic{
             "headers": []
           }]);
         }).catch(()=>{
-          ytdl('https://music.youtube.com/watch?v='+videoId, { quality: 'highestaudio' }).then(resolve).catch(error => reject(new Result(-1, error.message, null, {})));
+          ytdl('https://music.youtube.com/watch?v='+videoId, { quality: 'highestaudio' })
+          .then(resolve)
+          .catch(error => resolve([{"url": "", "headers": []}]));
+        });
+      } catch (error) {
+        resolve([{"url": "", "headers": []}])
+      }
+    })
+  }
+
+  static getStreamingList(videoIdList){
+    return new Promise((resolve, reject) => {
+      try {
+        if(Array.isArray(videoIdList) !== true){
+          videoIdList = typeof videoIdList === "string" ? [videoIdList] : null;
+        }
+
+        if(!videoIdList){
+          reject(new Result(-1, "Erro ao adquirir streaming de áudio!", null, {}));
+          return;
+        }
+
+        Promise.all(videoIdList.map((videoId)=>{
+          return this.getStreaming(videoId);
+        })).then((list)=>{
+          resolve(list);
+        }).catch(()=>{
+          reject(new Result(-1, "Erro ao adquirir streamings de áudios!", null, {}));
         });
       } catch (error) {
         reject(new Result(-1, "Erro ao adquirir streaming de áudio!", null, {}));
       }
-    })
+    });
   }
 }
 

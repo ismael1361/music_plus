@@ -36,7 +36,7 @@ export default ()=>{
 
     //console.log(JSON.stringify(a, null, 2));
 
-    PlaylistHelper.playPlaylist(navigation, a.browse.browseId, "ALBUM");
+    navigation.navigate("Playlist", a);
   }
 
   const genresItens = (g)=>{

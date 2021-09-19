@@ -1003,38 +1003,6 @@ exports.parseNextPanel = (context) => {
   return result;
 };
 
-/*
-[
-  ['context', ['fv', 'sectionListRenderer:contents']],
-  ['result', {
-    title: ['context', ['fv', 'header:runs:text']],
-    list: ['context', ['fv', 'items'], {
-      title: ['context', ['nth', ['fv', 'title:runs:text']]]
-    }]
-  }]
-]
-*/
-
-/*
-{
-  'panelContext': ['fv', ['get', 'context'], 'sectionListRenderer:contents'],
-  'result': {
-    'title': {
-      'result': ['fv', ['get', 'panelContext'], 'header:runs:text']
-    },
-    'list': {
-      'content': ['nth', ['fv', ['get', 'panelContext'], 'items'], 0],
-      'result': ['map', {
-        'title': ['nth', ['fv', ['get', 'content'], 'title:runs:text'], 0],
-        'result': {
-          'title': ['get', 'title']
-        }
-      }]
-    }
-  }
-}
-*/
-
 const renderContext = (context, conf, type)=>{
   let result = (type && type === "object" ? {} : []);
   try{
@@ -1045,7 +1013,7 @@ const renderContext = (context, conf, type)=>{
 
     let k, variables = {context: context};
 
-    let v = (type, valor, prop)=>{
+    let v = (type, valor, prop, typeResult)=>{
       valor = Array.isArray(valor) ? v.apply(null, valor) : valor;
 
       switch(type){
@@ -1113,7 +1081,7 @@ exports.parseGenresCategoryList = (context)=>{
             subtitle: ['join', ['fv', ['get', 'context'], 'subtitle:runs:text'], ""],
             trackingParams: ['nth', ['fv', ['get', 'context'], 'trackingParams'], 0],
             browseId: ['nth', ['fv', ['get', 'context'], 'navigationEndpoint:browseEndpoint:browseId'], 0],
-            thumbnails: ['fv', ['get', 'context'], 'thumbnail:thumbnails']
+            thumbnails: ['fv', ['get', 'context'], 'thumbnail:thumbnails', 'array']
           },
           result: {
             title: ['get', 'title'],

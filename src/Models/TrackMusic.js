@@ -5,8 +5,9 @@ import { YoutubeMusic } from '../utils';
 import ImageColors from 'react-native-image-colors';
 
 export default class TrackMusic extends FirestoreObject {
-  constructor(path, videoId, playlistId, params, title, subtitle, duration, thumbnails, streamings) {
+  constructor(path, browseId, videoId, playlistId, params, title, subtitle, duration, thumbnails, streamings) {
     super(path);
+    this.browseId = browseId || '';
     this.videoId = videoId || '';
     this.playlistId = playlistId || '';
     this.params = params || '';

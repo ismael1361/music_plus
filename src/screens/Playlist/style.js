@@ -114,6 +114,6 @@ export const TrackMusicListItemSubtitle = styled.Text`
 `;
 
 export const TrackMusicListItemDuration = styled.Text`
-	font-size: 14px;
-	opacity: 0.7;
+	font-size: 12px;
+	opacity: 0.6;
 `;
